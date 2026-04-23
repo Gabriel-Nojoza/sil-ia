@@ -1,0 +1,500 @@
+{
+  "name": "Chat IA Power BI — JA Diretoria Automação",
+  "nodes": [
+    {
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "chat-powerbi-webhook",
+      "parameters": {
+        "path": "chat-powerbi",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-set-metadata",
+      "name": "Set Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput || $json.message || $json.text || $json.body?.chatInput || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId || $json.session_id || $json.body?.sessionId || ('session_' + Date.now()) }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "userId",
+              "value": "={{ $json.userId || $json.user_id || $json.body?.userId || 'anon' }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "powerbiDatasetId",
+              "value": "={{ $vars.POWERBI_DATASET_ID || $json.datasetId || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-load-catalog",
+      "name": "Load Catalog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "// ============================================================\n// Load Catalog — JA DIRETORIA AUTOMACAO\n// Retorna lista de métricas e dimensões permitidas\n// ============================================================\nconst catalog = {\n  default_period: 'mes_atual',\n  allowed_metrics: [\n    'Venda', 'Meta', '% Meta\\'', 'Lucro', '% Margem\\'', 'Vl Faturados\\'',\n    'Pedidos Enviados\\'', 'Tiquet Medio\\'', 'Qtde Clientes\\'', 'Qtde Produtos\\'',\n    'Desconto', '% Tendencia Ped.\\'', '$ Tendencia Ped.\\'', 'Evolução',\n    'Venda AA\\'', 'Venda Mês ant\\'', 'Bonificação', 'Novos Clientes\\'',\n    'Clientes Recorrentes\\'', 'Mix Medio\\'', 'Vl Devolução\\'', 'Vl Lucro\\'',\n    '% Lucro Venda\\'', 'Venda Acumulada\\'', 'Venda Projetada\\'', '% Proj./Meta\\'',\n    'Meta Projetada\\'', '% Meta Proj Ating.\\'', 'Qtde de Pedidos\\'',\n    '% Var AA\\'', 'Qtde Clientes AA\\'', 'Qtde Produtos AA\\'', 'LTV',\n    'Rank Vendedor\\'', '% Novos\\'', 'Clientes sem Compra\\'', 'Qtde Clientes Ativos\\'',\n    'Venda Data Pedido', '% de Var Vendas Ano Anterior\\'', '% de Var Vendas Mês Anterior\\'',\n    'Qtde Clientes Mês anterior\\'', 'Venda Mês anterior\\'', 'Nova Meta Diaria\\'',\n    'Dif Venda vs Meta\\'', 'Vl. Medio Venda Dia\\'', 'Vl. Meta Final\\'',\n    'Media Movel Mês - Mes Atual\\'', '% de Var Clientes Ano Anterior\\'',\n    'Pedidos Enviados AA\\'', '% de Var Pedidos AA\\'', 'Vl CMV Venda\\'',\n    'Custo Tabela\\'', 'Mix Prior. Mês Anterior\\'', 'Qtde Prod. Mix\\'',\n    'Qtde Prod. Mix Pos.\\'', '% Prod. Mix Posit.\\'', 'Qtde Clientes Mix\\'',\n    'Gap Mix\\'', 'Target', 'Qtde Vend. Num.\\'', 'Qtde Vendedores\\'',\n    'Vl Faturados AA\\'', 'Vl Faturados MA\\'', '% Var Vl Fat. AA\\'',\n    'Tiquet Medio AA\\'', 'Tiquet Medio MA\\'', 'Vl Lucro AA\\'', 'Vl Lucro MA\\'',\n    'Vl Devolução AA\\'', 'Vl Devolução MA\\'', 'Qtde Clientes MA\\'', 'Qtde Produtos MA\\''\n  ],\n  allowed_dimensions: [\n    'Supervisor[NOME]', 'Supervisor[CODSUPERVISOR]', 'Supervisor[REGIONAL]',\n    'Gerente[NOMEGERENTE]', 'Gerente[CODGERENTE]',\n    'Vendedores[NOME]', 'Vendedores[CODUSUR]',\n    'PCCLIENTE[CLIENTE]', 'PCCLIENTE[CODCLI]',\n    'PCPRODUTOS[DESCRICAO]', 'PCPRODUTOS[CODPROD]', 'PCPRODUTOS[FORNECEDOR]',\n    'Nome Filial[Filial]', 'Nome Filial[Cod]',\n    'Calendario[Mês]', 'Calendario[Ano]', 'Calendario[MesAnoNome]'\n  ],\n  catalog_loaded: true,\n  summary: { totalTables: 114, totalMeasures: 382, totalDimensionCandidates: 588 }\n};\n\nconst input = $input.first().json;\nreturn [{ json: { ...input, catalog } }];"
+      }
+    },
+    {
+      "id": "node-intent-classifier",
+      "name": "Intent Classifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $vars.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 10,\n  system: 'Você classifica intenções de chat. Retorne SOMENTE uma palavra:\\n- \"powerbi\" → se o usuário quer consultar dados, vendas, métricas, relatórios, Power BI, supervisores, gerentes, filiais, metas, faturamento\\n- \"general\" → se for saudação, pergunta genérica, agradecimento, sobre o sistema\\n- \"clarify\" → se a pergunta for ambígua ou completamente fora de escopo\\n\\nResponda APENAS com uma das três palavras acima, sem pontuação.',\n  messages: [{ role: 'user', content: $json.chatInput }]\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-parse-intent",
+      "name": "Parse Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst prev = $('Load Catalog').first().json;\n\nlet intentRaw = '';\ntry {\n  intentRaw = (input.content?.[0]?.text || input.choices?.[0]?.message?.content || '').toLowerCase().trim();\n} catch(e) {\n  intentRaw = 'general';\n}\n\nlet intent = 'general';\nif (intentRaw.includes('powerbi')) intent = 'powerbi';\nelse if (intentRaw.includes('clarify')) intent = 'clarify';\nelse intent = 'general';\n\nreturn [{ json: { ...prev, intent, intentRaw } }];"
+      }
+    },
+    {
+      "id": "node-route-intent",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1100, 300],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "outputKey": "0",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "powerbi",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "1",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "general",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "fallbackOutput": 2,
+        "options": {}
+      }
+    },
+    {
+      "id": "node-query-planner",
+      "name": "AI Query Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 120],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $vars.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 256,\n  system: 'Você é um planejador de consultas para um dataset Power BI chamado \"JA DIRETORIA AUTOMACAO\".\\n\\nSeu trabalho: receber a pergunta do usuário e retornar SOMENTE um JSON válido, sem explicações, sem markdown, sem texto extra.\\n\\n## Dimensões disponíveis\\n- supervisor, gerente, vendedor, cliente, produto, filial, regional\\n\\n## Métricas disponíveis\\n- venda, meta, % meta, tendencia, faturamento, lucro, margem, ticket, desconto, evolucao, novos clientes, clientes recorrentes, qtde clientes, qtde produtos, venda aa, bonificacao, devolucao, mix medio\\n\\n## Filtros disponíveis\\n- filial: código (ex: \"01\", \"02\")\\n- gerente: código do gerente\\n- supervisor: código do supervisor\\n- regional: número da regional\\n- produto: código do produto\\n- cliente: código do cliente\\n\\n## Formato de saída (JSON exato)\\n{\"dimension\":\"<dim>\",\"metrics\":[\"<m1>\",\"<m2>\"],\"filters\":[{\"field\":\"<f>\",\"value\":\"<v>\"}]}\\n\\n## Exemplos\\nPergunta: \"venda por supervisor na filial 01\"\\nResposta: {\"dimension\":\"supervisor\",\"metrics\":[\"venda\"],\"filters\":[{\"field\":\"filial\",\"value\":\"01\"}]}\\n\\nPergunta: \"top clientes por venda e margem\"\\nResposta: {\"dimension\":\"cliente\",\"metrics\":[\"venda\",\"margem\"],\"filters\":[]}\\n\\n## Regra importante\\n- Retorne SOMENTE o JSON, nada mais.\\n- Se não for sobre dados comerciais: {\"error\":\"fora do escopo\"}',\n  messages: [{ role: 'user', content: $json.chatInput }]\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-parse-plan",
+      "name": "Parse Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 120],
+      "parameters": {
+        "jsCode": "const aiResp = $input.first().json;\nconst prev = $('Route by Intent').first().json;\n\nlet planRaw = '';\ntry {\n  planRaw = (aiResp.content?.[0]?.text || '').trim();\n  // Remove markdown code fences if any\n  planRaw = planRaw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n} catch(e) {\n  planRaw = '{}';\n}\n\nlet plan = null;\nlet planError = null;\ntry {\n  plan = JSON.parse(planRaw);\n  if (plan.error) {\n    planError = plan.error;\n    plan = null;\n  }\n} catch(e) {\n  planError = 'JSON inválido: ' + planRaw.substring(0, 100);\n}\n\nreturn [{ json: { ...prev, plan, planRaw, planError } }];"
+      }
+    },
+    {
+      "id": "node-dax-generator",
+      "name": "DAX Generator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 120],
+      "parameters": {
+        "jsCode": "// ============================================================\n// DAX Generator v2 — usa catálogo dinâmico do Load Catalog\n// ============================================================\nconst DIM = {\n  supervisor:   { table: 'Supervisor',  col: 'NOME',        filterCol: 'CODSUPERVISOR' },\n  supervisores: { table: 'Supervisor',  col: 'NOME',        filterCol: 'CODSUPERVISOR' },\n  gerente:      { table: 'Gerente',     col: 'NOMEGERENTE', filterCol: 'CODGERENTE'    },\n  gerentes:     { table: 'Gerente',     col: 'NOMEGERENTE', filterCol: 'CODGERENTE'    },\n  vendedor:     { table: 'Vendedores',  col: 'NOME',        filterCol: 'CODUSUR'       },\n  vendedores:   { table: 'Vendedores',  col: 'NOME',        filterCol: 'CODUSUR'       },\n  cliente:      { table: 'PCCLIENTE',   col: 'CLIENTE',     filterCol: 'CODCLI'        },\n  clientes:     { table: 'PCCLIENTE',   col: 'CLIENTE',     filterCol: 'CODCLI'        },\n  produto:      { table: 'PCPRODUTOS',  col: 'DESCRICAO',   filterCol: 'CODPROD'       },\n  produtos:     { table: 'PCPRODUTOS',  col: 'DESCRICAO',   filterCol: 'CODPROD'       },\n  filial:       { table: 'Nome Filial', col: 'Filial',      filterCol: 'Cod'           },\n  filiais:      { table: 'Nome Filial', col: 'Filial',      filterCol: 'Cod'           },\n  regional:     { table: 'Supervisor',  col: 'REGIONAL',    filterCol: 'REGIONAL'      },\n};\n\nconst MED = {\n  'venda': 'Venda', 'vendas': 'Venda',\n  'pedidos enviados': \"Pedidos Enviados'\", 'pedidos': \"Pedidos Enviados'\",\n  'faturamento': \"Vl Faturados'\", 'faturado': \"Vl Faturados'\",\n  'meta': 'Meta', '% meta': \"% Meta'\", 'atingimento': \"% Meta'\",\n  'lucro': 'Lucro', 'margem': \"% Margem'\", '% margem': \"% Margem'\",\n  'ticket': \"Tiquet Medio'\", 'tiquet': \"Tiquet Medio'\",\n  'ticket medio': \"Tiquet Medio'\", 'tiquet medio': \"Tiquet Medio'\",\n  'qtde clientes': \"Qtde Clientes'\", 'qtde produtos': \"Qtde Produtos'\",\n  'desconto': 'Desconto',\n  'tendencia': \"% Tendencia Ped.'\", 'tendência': \"% Tendencia Ped.'\",\n  '% tendencia': \"% Tendencia Ped.'\", '$ tendencia': \"$ Tendencia Ped.'\",\n  'evolucao': 'Evolução', 'evolução': 'Evolução',\n  'venda aa': \"Venda AA'\", 'venda ano anterior': \"Venda AA'\",\n  'venda mes anterior': \"Venda Mês ant'\",\n  'bonificacao': 'Bonificação', 'bonificação': 'Bonificação',\n  'novos clientes': \"Novos Clientes'\",\n  'clientes recorrentes': \"Clientes Recorrentes'\",\n  'mix medio': \"Mix Medio'\",\n  'devolucao': \"Vl Devolução'\", 'devolução': \"Vl Devolução'\",\n};\n\nconst FILTER_MAP = {\n  filial:     { table: 'Nome Filial', col: 'Cod'           },\n  gerente:    { table: 'Gerente',     col: 'CODGERENTE'    },\n  supervisor: { table: 'Supervisor',  col: 'CODSUPERVISOR' },\n  regional:   { table: 'Supervisor',  col: 'REGIONAL'      },\n  produto:    { table: 'PCPRODUTOS',  col: 'CODPROD'       },\n  cliente:    { table: 'PCCLIENTE',   col: 'CODCLI'        },\n};\n\nfunction findMeasureInCatalog(keyword, allowedMetrics) {\n  if (!allowedMetrics || !allowedMetrics.length) return null;\n  const k = keyword.toLowerCase().trim();\n  const exact = allowedMetrics.find(m => m.toLowerCase() === k);\n  if (exact) return exact;\n  const partial = allowedMetrics.find(m => m.toLowerCase().replace(/['\\s]/g, '').includes(k.replace(/\\s/g, '')));\n  return partial || null;\n}\n\nfunction escapeTable(name) {\n  return name.includes(' ') ? `'${name}'` : name;\n}\n\nfunction resolveMeasure(keyword, allowedMetrics) {\n  const k = (keyword || '').toLowerCase().trim();\n  if (MED[k]) return MED[k];\n  const fromCatalog = findMeasureInCatalog(k, allowedMetrics);\n  if (fromCatalog) return fromCatalog;\n  return keyword;\n}\n\nfunction buildDAX(plan, allowedMetrics) {\n  const dimKey = (plan.dimension || '').toLowerCase().trim();\n  const dimInfo = DIM[dimKey];\n  if (!dimInfo) throw new Error(`Dimensão desconhecida: \"${plan.dimension}\". Válidas: ${Object.keys(DIM).join(', ')}`);\n\n  const dimTable = escapeTable(dimInfo.table);\n  const dimCol = dimInfo.col;\n  const metrics = plan.metrics && plan.metrics.length > 0 ? plan.metrics : ['venda'];\n\n  const measureLines = metrics.map(m => {\n    const name = resolveMeasure(m, allowedMetrics);\n    return `    \"${m}\", [${name}]`;\n  }).join(',\\n');\n\n  const filterClauses = (plan.filters || []).map(f => {\n    const fi = FILTER_MAP[(f.field || '').toLowerCase().trim()];\n    if (!fi || f.value == null) return null;\n    const ft = escapeTable(fi.table);\n    const isNum = /^\\d+$/.test(String(f.value));\n    const val = isNum ? String(f.value) : `\"${f.value}\"`;\n    return `    FILTER(ALL(${ft}), ${ft}[${fi.col}] = ${val})`;\n  }).filter(Boolean).join(',\\n');\n\n  const filterBlock = filterClauses ? filterClauses + ',\\n' : '';\n  const orderBy = `[${resolveMeasure(metrics[0], allowedMetrics)}]`;\n\n  return `EVALUATE\\nTOPN(\\n    500,\\n    SUMMARIZECOLUMNS(\\n        ${dimTable}[${dimCol}],\\n${filterBlock}${measureLines}\\n    ),\\n    ${orderBy}, DESC\\n)`;\n}\n\n// Entry Point\nconst input = $input.first().json;\nconst allowedMetrics = input.catalog?.allowed_metrics || [];\nlet plan = input.plan;\n\nif (!plan || !plan.dimension) {\n  return [{ json: { ...input, daxQuery: null, daxError: 'Plano inválido: ' + JSON.stringify(plan) } }];\n}\n\nlet daxQuery = null, daxError = null;\ntry {\n  daxQuery = buildDAX(plan, allowedMetrics);\n} catch(err) {\n  daxError = err.message;\n}\n\nreturn [{ json: { ...input, plan, daxQuery, daxError, catalogMeasuresCount: allowedMetrics.length } }];"
+      }
+    },
+    {
+      "id": "node-execute-powerbi",
+      "name": "Execute Power BI Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 120],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.powerbi.com/v1.0/myorg/datasets/{{ $vars.POWERBI_DATASET_ID }}/executeQueries",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $vars.POWERBI_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  queries: [{ query: $json.daxQuery }],\n  serializerSettings: { includeNulls: true }\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "node-check-error",
+      "name": "Check Query Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 120],
+      "parameters": {
+        "jsCode": "const pbiResp = $input.first().json;\nconst prev = $('DAX Generator').first().json;\n\n// Verifica erros do DAX Generator\nif (prev.daxError) {\n  return [{ json: { ...prev, queryOk: false, queryError: prev.daxError, pbiRawResult: null } }, null];\n}\n\n// Verifica erro na resposta do Power BI\nif (pbiResp.error || pbiResp.message) {\n  return [{ json: { ...prev, queryOk: false, queryError: pbiResp.error?.message || pbiResp.message, pbiRawResult: pbiResp } }, null];\n}\n\n// Extrai as linhas do resultado\nlet rows = [];\ntry {\n  rows = pbiResp.results?.[0]?.tables?.[0]?.rows || [];\n} catch(e) {\n  rows = [];\n}\n\nif (rows.length === 0) {\n  return [null, { json: { ...prev, queryOk: false, queryError: 'Nenhum dado encontrado para esta consulta.', pbiRawResult: pbiResp } }];\n}\n\nreturn [{ json: { ...prev, queryOk: true, queryError: null, pbiRows: rows, pbiRowCount: rows.length, pbiRawResult: pbiResp } }, null];"
+      }
+    },
+    {
+      "id": "node-ai-insights",
+      "name": "AI Insights Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, 20],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $vars.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-6',\n  max_tokens: 1024,\n  system: 'Você é um analista de dados especialista em vendas e distribuidora. Analise os dados do Power BI e responda à pergunta do usuário de forma clara, objetiva e em português.\\n\\nSua resposta deve:\\n1. Começar com um resumo executivo de 1-2 frases\\n2. Listar os top resultados de forma organizada (use tabela markdown se houver múltiplas colunas)\\n3. Destacar insights relevantes: maiores valores, menores, variações, tendências\\n4. Terminar com uma conclusão ou recomendação quando pertinente\\n\\nUse formatação markdown. Seja direto e profissional.',\n  messages: [{\n    role: 'user',\n    content: `Pergunta do usuário: ${$json.chatInput}\\n\\nConsulta executada (dimensão: ${$json.plan?.dimension}, métricas: ${JSON.stringify($json.plan?.metrics)}, filtros: ${JSON.stringify($json.plan?.filters)})\\n\\nResultados (${$json.pbiRowCount} registros):\\n${JSON.stringify($json.pbiRows?.slice(0, 50), null, 2)}${$json.pbiRowCount > 50 ? '\\n\\n[...resultados truncados para os top 50]' : ''}`\n  }]\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-format-insights",
+      "name": "Format Insights",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 20],
+      "parameters": {
+        "jsCode": "const aiResp = $input.first().json;\nconst prev = $('Check Query Error').first().json;\n\nconst analysis = aiResp.content?.[0]?.text || 'Não foi possível gerar análise.';\n\nreturn [{ json: {\n  sessionId: prev.sessionId,\n  chatInput: prev.chatInput,\n  response: analysis,\n  source: 'powerbi',\n  plan: prev.plan,\n  daxQuery: prev.daxQuery,\n  rowCount: prev.pbiRowCount,\n  success: true\n} }];"
+      }
+    },
+    {
+      "id": "node-fallback-error",
+      "name": "Fallback Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2420, 220],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "response",
+              "value": "=Desculpe, não consegui obter os dados do Power BI. {{ $json.queryError ? 'Motivo: ' + $json.queryError : 'Tente reformular a pergunta ou verifique os filtros.' }}",
+              "type": "string"
+            },
+            {
+              "id": "b4",
+              "name": "source",
+              "value": "error",
+              "type": "string"
+            },
+            {
+              "id": "b5",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-general-chat",
+      "name": "General Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $vars.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 512,\n  system: 'Você é um assistente inteligente de BI integrado ao Power BI da JA Diretoria Automação. Responda em português de forma amigável e profissional.\\n\\nVocê pode consultar dados de:\\n- Vendas, metas, faturamento, lucro, margem\\n- Supervisores, gerentes, vendedores, filiais, regionais\\n- Clientes, produtos, tendências\\n\\nPara consultas de dados, oriente o usuário a fazer perguntas como:\\n\"me mostra a venda por supervisor\" ou \"top clientes por faturamento na filial 01\"\\n\\nPara dúvidas gerais, responda normalmente.',\n  messages: [{ role: 'user', content: $json.chatInput }]\n}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-format-general",
+      "name": "Format General",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 420],
+      "parameters": {
+        "jsCode": "const aiResp = $input.first().json;\nconst prev = $('Route by Intent').first().json;\n\nconst text = aiResp.content?.[0]?.text || 'Como posso te ajudar com os dados do Power BI?';\n\nreturn [{ json: {\n  sessionId: prev.sessionId,\n  chatInput: prev.chatInput,\n  response: text,\n  source: 'general',\n  success: true\n} }];"
+      }
+    },
+    {
+      "id": "node-clarify",
+      "name": "Request Clarification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1320, 560],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "response",
+              "value": "Não entendi bem sua pergunta. Posso te ajudar com dados do Power BI como:\n\n- **Vendas e metas**: \"me mostra venda e meta por supervisor\"\n- **Faturamento**: \"qual o faturamento por filial?\"\n- **Análise de clientes**: \"top 10 clientes por venda\"\n- **Por filtro**: \"vendas por gerente na filial 01\"\n\nO que você gostaria de consultar?",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "source",
+              "value": "clarify",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2860, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  output: $json.response,\n  sessionId: $json.sessionId,\n  source: $json.source,\n  success: $json.success,\n  metadata: {\n    rowCount: $json.rowCount || null,\n    daxQuery: $json.daxQuery || null\n  }\n}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Set Metadata", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Metadata": {
+      "main": [
+        [{ "node": "Load Catalog", "type": "main", "index": 0 }]
+      ]
+    },
+    "Load Catalog": {
+      "main": [
+        [{ "node": "Intent Classifier", "type": "main", "index": 0 }]
+      ]
+    },
+    "Intent Classifier": {
+      "main": [
+        [{ "node": "Parse Intent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Intent": {
+      "main": [
+        [{ "node": "Route by Intent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [{ "node": "AI Query Planner", "type": "main", "index": 0 }],
+        [{ "node": "General Chat", "type": "main", "index": 0 }],
+        [{ "node": "Request Clarification", "type": "main", "index": 0 }]
+      ]
+    },
+    "AI Query Planner": {
+      "main": [
+        [{ "node": "Parse Plan", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Plan": {
+      "main": [
+        [{ "node": "DAX Generator", "type": "main", "index": 0 }]
+      ]
+    },
+    "DAX Generator": {
+      "main": [
+        [{ "node": "Execute Power BI Query", "type": "main", "index": 0 }]
+      ]
+    },
+    "Execute Power BI Query": {
+      "main": [
+        [{ "node": "Check Query Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Query Error": {
+      "main": [
+        [{ "node": "AI Insights Analysis", "type": "main", "index": 0 }],
+        [{ "node": "Fallback Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "AI Insights Analysis": {
+      "main": [
+        [{ "node": "Format Insights", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Insights": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fallback Error": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "General Chat": {
+      "main": [
+        [{ "node": "Format General", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format General": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Request Clarification": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "instanceId": "chat-powerbi-ja-diretoria",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": ["powerbi", "chat", "ia", "dax"],
+  "versionId": "v2.0.0"
+}
