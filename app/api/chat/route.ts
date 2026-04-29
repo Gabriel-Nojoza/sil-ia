@@ -19,7 +19,7 @@ async function getCompanyCredentials(companyId: string) {
     const supabase = getSupabaseAdmin();
     const { data } = await supabase
       .from("companies")
-      .select("tenant_id, client_id, client_secret, workspace_id, dataset_id")
+      .select("tenant_id, client_id, client_secret, workspace_id, dataset_id, webhook_url")
       .eq("id", companyId)
       .maybeSingle();
     return data ?? null;
@@ -238,20 +238,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Payload invalido." }, { status: 400 });
   }
 
-  const message = getPayloadMessage(payload);
-  const chartRequested = isChartRequest(message);
-  const userWebhook = payload.webhook_url as string | undefined;
-  const effectiveWebhook = userWebhook;
+  // Webhook do payload (usuário ou empresa) tem prioridade absoluta — vai direto pro n8n
+  const payloadWebhook = (payload.webhook_url as string | undefined)?.trim() || "";
 
-  if (userWebhook && !chartRequested) {
+  // Se não veio no payload, busca webhook da empresa no banco
+  let effectiveWebhook = payloadWebhook;
+  if (!effectiveWebhook) {
+    const companyId = String(payload.company_id ?? "");
+    if (companyId) {
+      const creds = await getCompanyCredentials(companyId);
+      effectiveWebhook = creds?.webhook_url?.trim() || "";
+    }
+  }
+
+  // Fallback: variável de ambiente global
+  if (!effectiveWebhook) {
+    effectiveWebhook = process.env.N8N_WEBHOOK_URL?.trim() || "";
+  }
+
+  if (effectiveWebhook) {
     try {
-      return await runN8n(payload, userWebhook);
+      return await runN8n(payload, effectiveWebhook);
     } catch (error) {
       const reason = error instanceof Error ? error.message : "Erro de rede.";
       return NextResponse.json({ message: reason }, { status: 502 });
     }
   }
 
+  // Sem webhook → tenta engine SIL (Power BI direto)
   try {
     return await runSilEngine(payload);
   } catch (silError) {
@@ -259,22 +273,7 @@ export async function POST(request: Request) {
       "[/api/chat] SIL engine falhou:",
       silError instanceof Error ? silError.message : silError,
     );
-    console.error("[/api/chat] webhook disponivel:", effectiveWebhook || "NENHUM");
-
-    if (!effectiveWebhook) {
-      const reason = silError instanceof Error ? silError.message : "Erro interno.";
-      return NextResponse.json({ message: reason }, { status: 500 });
-    }
-
-    try {
-      return await runN8n(payload, effectiveWebhook);
-    } catch (n8nError) {
-      console.error(
-        "[/api/chat] n8n tambem falhou:",
-        n8nError instanceof Error ? n8nError.message : n8nError,
-      );
-      const reason = n8nError instanceof Error ? n8nError.message : "Erro de rede.";
-      return NextResponse.json({ message: reason }, { status: 502 });
-    }
+    const reason = silError instanceof Error ? silError.message : "Erro interno.";
+    return NextResponse.json({ message: reason }, { status: 500 });
   }
 }
