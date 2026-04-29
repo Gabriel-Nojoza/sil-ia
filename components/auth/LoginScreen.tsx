@@ -6,6 +6,7 @@ import { listCompanies } from "@/lib/company-service";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useAdminSurface } from "@/hooks/use-admin-surface";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createUuid } from "@/lib/uuid";
 import type { CompanyRecord } from "@/types/company";
 import type { AuthUser, UserRole } from "@/types/chat";
 
@@ -172,7 +173,7 @@ export function LoginScreen() {
     if (role !== "admin" && !selectedCompany) return;
 
     const nextUser: AuthUser = {
-      userId: crypto.randomUUID(),
+      userId: createUuid(),
       name: name.trim(),
       email: email.trim(),
       role,

@@ -8,6 +8,7 @@ import { MessageList } from "@/components/chat/MessageList";
 import { HistorySidebar } from "@/components/chat/HistorySidebar";
 import { sendChatMessage } from "@/lib/chat-service";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { createUuid } from "@/lib/uuid";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import type { ChatMessage, ChatRequestPayload, MessageStatus } from "@/types/chat";
 
@@ -44,11 +45,11 @@ export function ChatScreen() {
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
 
   useEffect(() => {
-    setSessionId(crypto.randomUUID());
+    setSessionId(createUuid());
   }, []);
 
   function handleNewChat() {
-    setSessionId(crypto.randomUUID());
+    setSessionId(createUuid());
     setMessages([welcomeMessage()]);
     setError(null);
   }
@@ -57,11 +58,11 @@ export function ChatScreen() {
     const trimmedInput = inputValue.trim();
     if (!trimmedInput || isSending) return;
 
-    const activeSessionId = sessionId || crypto.randomUUID();
+    const activeSessionId = sessionId || createUuid();
     if (!sessionId) setSessionId(activeSessionId);
 
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       role: "user",
       content: trimmedInput,
       createdAt: new Date().toISOString(),

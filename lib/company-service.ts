@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createUuid } from "@/lib/uuid";
 import type {
   CompanyBaseInput,
   CompanyInsertRow,
@@ -147,7 +148,7 @@ async function createCompanyMock(
   await new Promise((resolve) => setTimeout(resolve, 700));
 
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     name: input.name,
     workspaceId: input.workspaceId,
     datasetId: input.datasetId,
