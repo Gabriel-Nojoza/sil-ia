@@ -1,3 +1,4 @@
+import { useEffect, useRef, memo } from "react";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import type { ChatMessage } from "@/types/chat";
@@ -8,8 +9,21 @@ interface MessageListProps {
   error: string | null;
 }
 
+const MemoizedBubble = memo(MessageBubble, (prev, next) => {
+  return (
+    prev.message.id === next.message.id &&
+    prev.message.status === next.message.status &&
+    prev.message.content === next.message.content
+  );
+});
+
 export function MessageList({ messages, isSending, error }: MessageListProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
   const isEmpty = messages.length === 0;
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, isSending]);
 
   return (
     <div className="chat-scrollbar flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">
@@ -27,7 +41,7 @@ export function MessageList({ messages, isSending, error }: MessageListProps) {
       ) : (
         <div className="mx-auto flex max-w-4xl flex-col gap-4">
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MemoizedBubble key={message.id} message={message} />
           ))}
 
           {isSending ? <TypingIndicator /> : null}
@@ -37,6 +51,8 @@ export function MessageList({ messages, isSending, error }: MessageListProps) {
               {error}
             </div>
           ) : null}
+
+          <div ref={bottomRef} />
         </div>
       )}
     </div>
