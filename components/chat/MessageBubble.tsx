@@ -18,6 +18,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         ? "Erro ao enviar"
         : null;
 
+  // Respostas estruturadas da SIL ficam fora do quadrado
+  if (hasStructuredResponse && message.silResponse) {
+    return (
+      <article className="flex w-full justify-start" aria-live="polite">
+        <div className="w-full max-w-3xl min-w-0">
+          <div className="mb-2 text-xs uppercase tracking-[0.18em] text-muted">SIL</div>
+          <SilBubble response={message.silResponse} />
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article
       className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}
@@ -35,13 +47,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {statusLabel ? <span className="text-accent">{statusLabel}</span> : null}
         </div>
 
-        {hasStructuredResponse && message.silResponse ? (
-          <SilBubble response={message.silResponse} />
-        ) : (
-          <p className="whitespace-pre-wrap text-sm leading-7 sm:text-[15px]">
-            {message.content}
-          </p>
-        )}
+        <p className="whitespace-pre-wrap text-sm leading-7 sm:text-[15px]">
+          {message.content}
+        </p>
       </div>
     </article>
   );
