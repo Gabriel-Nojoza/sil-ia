@@ -117,16 +117,16 @@ export function CompanyForm({
 
     try {
       const payload: UpdateCompanyInput = {
-        name: form.name.trim(),
-        workspaceId: form.workspaceId.trim(),
-        datasetId: form.datasetId.trim(),
-        tenantId: form.tenantId.trim(),
-        clientId: form.clientId.trim(),
-        clientSecret: form.clientSecret.trim(),
-        webhookUrl: form.webhookUrl.trim(),
-        timezone: form.timezone.trim(),
-        language: form.language.trim(),
-        powerbiIdentityMode: form.powerbiIdentityMode,
+        name: (form.name ?? "").trim(),
+        workspaceId: (form.workspaceId ?? "").trim(),
+        datasetId: (form.datasetId ?? "").trim(),
+        tenantId: (form.tenantId ?? "").trim(),
+        clientId: (form.clientId ?? "").trim(),
+        clientSecret: (form.clientSecret ?? "").trim(),
+        webhookUrl: (form.webhookUrl ?? "").trim(),
+        timezone: (form.timezone ?? "America/Sao_Paulo").trim(),
+        language: (form.language ?? "pt-BR").trim(),
+        powerbiIdentityMode: form.powerbiIdentityMode ?? "service_principal",
         monthlyMessageLimit: form.monthlyMessageLimit,
         overagePriceCents: form.overagePriceCents,
       };

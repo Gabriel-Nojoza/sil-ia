@@ -17,11 +17,22 @@ function getSupabaseAdmin() {
 async function getCompanyCredentials(companyId: string) {
   try {
     const supabase = getSupabaseAdmin();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("companies")
       .select("tenant_id, client_id, client_secret, workspace_id, dataset_id, webhook_url")
       .eq("id", companyId)
       .maybeSingle();
+
+    if (error) {
+      // webhook_url column may not exist yet — retry without it
+      const { data: fallback } = await supabase
+        .from("companies")
+        .select("tenant_id, client_id, client_secret, workspace_id, dataset_id")
+        .eq("id", companyId)
+        .maybeSingle();
+      return fallback ? { ...fallback, webhook_url: null } : null;
+    }
+
     return data ?? null;
   } catch {
     return null;
