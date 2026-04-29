@@ -109,30 +109,34 @@ function mapCompanyRow(row: CompanyRow | LegacyCompanyRow): CompanyRecord {
 function mapCompanyInput(input: CompanyBaseInput): CompanyInsertRow {
   return {
     name: input.name,
-    workspace_id: input.workspaceId,
-    dataset_id: input.datasetId,
-    tenant_id: input.tenantId,
-    client_id: input.clientId,
-    client_secret: input.clientSecret,
-    webhook_url: input.webhookUrl,
-    timezone: input.timezone,
-    language: input.language,
+    workspace_id: nullIfEmpty(input.workspaceId) as string,
+    dataset_id: nullIfEmpty(input.datasetId) as string,
+    tenant_id: nullIfEmpty(input.tenantId) as string,
+    client_id: nullIfEmpty(input.clientId) as string,
+    client_secret: nullIfEmpty(input.clientSecret) as string,
+    webhook_url: nullIfEmpty(input.webhookUrl) as string,
+    timezone: input.timezone.trim() || "America/Sao_Paulo",
+    language: input.language.trim() || "pt-BR",
     powerbi_identity_mode: input.powerbiIdentityMode,
     monthly_message_limit: input.monthlyMessageLimit,
     overage_price_cents: input.overagePriceCents,
   };
 }
 
+function nullIfEmpty(value: string | undefined | null) {
+  return value?.trim() || null;
+}
+
 function mapLegacyCompanyInput(input: CompanyBaseInput) {
   return {
     name: input.name,
-    workspace_id: input.workspaceId,
-    dataset_id: input.datasetId,
-    tenant_id: input.tenantId,
-    client_id: input.clientId,
-    client_secret: input.clientSecret,
-    timezone: input.timezone,
-    language: input.language,
+    workspace_id: nullIfEmpty(input.workspaceId),
+    dataset_id: nullIfEmpty(input.datasetId),
+    tenant_id: nullIfEmpty(input.tenantId),
+    client_id: nullIfEmpty(input.clientId),
+    client_secret: nullIfEmpty(input.clientSecret),
+    timezone: input.timezone.trim() || "America/Sao_Paulo",
+    language: input.language.trim() || "pt-BR",
     powerbi_identity_mode: input.powerbiIdentityMode,
   };
 }

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type {
   CompanyRecord,
   CreateCompanyInput,
-  PowerBiIdentityMode,
   UpdateCompanyInput,
 } from "@/types/company";
 
@@ -104,19 +103,13 @@ export function CompanyForm({
     event.preventDefault();
     setError(null);
 
-    if (!form.name.trim() || !form.workspaceId.trim() || !form.datasetId.trim()) {
-      setError(
-        mode === "edit"
-          ? "Preencha nome da empresa, workspace_id e dataset_id."
-          : "Preencha nome da empresa, workspace_id, dataset_id e os dados do usuario de acesso.",
-      );
+    if (!form.name.trim()) {
+      setError("Preencha o nome da empresa.");
       return;
     }
 
     if (mode === "create" && (!form.accessUserName.trim() || !form.accessUserEmail.trim())) {
-      setError(
-        "Preencha nome da empresa, workspace_id, dataset_id e os dados do usuario de acesso.",
-      );
+      setError("Preencha os dados do usuario de acesso.");
       return;
     }
 
@@ -182,7 +175,7 @@ export function CompanyForm({
       </div>
 
       <div className="grid gap-x-5 gap-y-6 2xl:grid-cols-2">
-        <label className="grid gap-3 text-sm text-foreground">
+        <label className="grid gap-3 text-sm text-foreground 2xl:col-span-2">
           <span>Nome da empresa</span>
           <input
             value={form.name ?? ""}
@@ -192,98 +185,12 @@ export function CompanyForm({
           />
         </label>
 
-        <label className="grid gap-3 text-sm text-foreground">
-          <span className="leading-6">Modo de autenticacao Power BI</span>
-          <select
-            value={form.powerbiIdentityMode ?? "service_principal"}
-            onChange={(event) =>
-              updateField(
-                "powerbiIdentityMode",
-                event.target.value as PowerBiIdentityMode,
-              )
-            }
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          >
-            <option value="service_principal">service_principal</option>
-            <option value="delegated_user">delegated_user</option>
-          </select>
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground">
-          <span>workspace_id</span>
-          <input
-            value={form.workspaceId ?? ""}
-            onChange={(event) => updateField("workspaceId", event.target.value)}
-            placeholder="UUID do workspace"
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground">
-          <span>dataset_id</span>
-          <input
-            value={form.datasetId ?? ""}
-            onChange={(event) => updateField("datasetId", event.target.value)}
-            placeholder="UUID do dataset"
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground">
-          <span>Tenant ID (Azure)</span>
-          <input
-            value={form.tenantId ?? ""}
-            onChange={(event) => updateField("tenantId", event.target.value)}
-            placeholder="UUID do tenant Azure AD"
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground">
-          <span>Client ID (App Registration)</span>
-          <input
-            value={form.clientId ?? ""}
-            onChange={(event) => updateField("clientId", event.target.value)}
-            placeholder="UUID do app Azure AD"
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
         <label className="grid gap-3 text-sm text-foreground 2xl:col-span-2">
-          <span>Client Secret</span>
-          <input
-            type="password"
-            value={form.clientSecret ?? ""}
-            onChange={(event) => updateField("clientSecret", event.target.value)}
-            placeholder="Secret do app Azure AD"
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground 2xl:col-span-2">
-          <span>Webhook URL (n8n - opcional)</span>
+          <span>Webhook URL (n8n)</span>
           <input
             value={form.webhookUrl ?? ""}
             onChange={(event) => updateField("webhookUrl", event.target.value)}
             placeholder="https://...n8n.../webhook/.../chat"
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground">
-          <span>Timezone</span>
-          <input
-            value={form.timezone ?? "America/Sao_Paulo"}
-            onChange={(event) => updateField("timezone", event.target.value)}
-            className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-          />
-        </label>
-
-        <label className="grid gap-3 text-sm text-foreground">
-          <span>Idioma</span>
-          <input
-            value={form.language ?? "pt-BR"}
-            onChange={(event) => updateField("language", event.target.value)}
             className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
           />
         </label>
