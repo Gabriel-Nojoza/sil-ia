@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAuthContext } from "@/hooks/use-auth-context";
+import { useAdminSurface } from "@/hooks/use-admin-surface";
 
 interface ChatHeaderProps {
   userName: string;
@@ -18,6 +19,7 @@ export function ChatHeader({
   companyName,
 }: ChatHeaderProps) {
   const { user, logout } = useAuthContext();
+  const { canAccessAdminSurface } = useAdminSurface();
 
   return (
     <header className="border-b border-border/80 px-3 py-2 sm:px-6">
@@ -57,9 +59,9 @@ export function ChatHeader({
               <p className="text-xs text-muted">{companyName}</p>
             </div>
           </div>
-          {user?.role === "admin" ? (
+          {user?.role === "admin" && canAccessAdminSurface ? (
             <Link
-              href="/admin/companies"
+              href="/admin/dashboard"
               className="hidden rounded-xl border border-border/80 bg-white/5 px-3 py-1.5 text-sm text-foreground transition hover:border-accent/50 hover:bg-accent/10 sm:inline-flex"
             >
               Admin

@@ -5,11 +5,25 @@ create table if not exists companies (
   name text not null,
   workspace_id uuid not null,
   dataset_id uuid not null,
+  tenant_id text not null default '',
+  client_id text not null default '',
+  client_secret text not null default '',
+  webhook_url text not null default '',
   timezone text default 'America/Sao_Paulo',
   language text default 'pt-BR',
   powerbi_identity_mode text default 'service_principal',
+  monthly_message_limit integer,
+  overage_price_cents integer,
   created_at timestamptz not null default now()
 );
+
+alter table if exists companies
+  add column if not exists tenant_id text not null default '',
+  add column if not exists client_id text not null default '',
+  add column if not exists client_secret text not null default '',
+  add column if not exists webhook_url text not null default '',
+  add column if not exists monthly_message_limit integer,
+  add column if not exists overage_price_cents integer;
 
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),

@@ -6,6 +6,7 @@ node_modules/
 # production build
 .next/
 out/
+*.tsbuildinfo
 
 # env files - NUNCA subir para o repositório
 .env

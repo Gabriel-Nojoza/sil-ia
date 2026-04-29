@@ -1,6 +1,18 @@
 import type { ChatRequestPayload, ChatResponse } from "@/types/chat";
 
+import type { SilResponse } from "@/components/sil/types";
+
+function isSilResponse(value: unknown): value is SilResponse {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "blocks" in value &&
+    Array.isArray((value as SilResponse).blocks)
+  );
+}
+
 function createAssistantMessage(content: string, raw?: unknown): ChatResponse {
+  const silResponse = isSilResponse(raw) ? raw : undefined;
   return {
     message: {
       id: crypto.randomUUID(),
@@ -8,6 +20,7 @@ function createAssistantMessage(content: string, raw?: unknown): ChatResponse {
       content,
       createdAt: new Date().toISOString(),
       status: "sent",
+      silResponse,
     },
     raw,
   };

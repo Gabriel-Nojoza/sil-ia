@@ -1,22 +1,58 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listCompanies } from "@/lib/company-service";
 import { useAuthContext } from "@/hooks/use-auth-context";
+import { useAdminSurface } from "@/hooks/use-admin-surface";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { CompanyRecord } from "@/types/company";
 import type { AuthUser, UserRole } from "@/types/chat";
 
+const ADMIN_LOGIN_STORAGE_KEY = "sil-admin-login-draft";
+
 export function LoginScreen() {
   const { login } = useAuthContext();
   const router = useRouter();
+  const { canAccessAdminSurface, isReady, isStandalone } = useAdminSurface();
+  const autoFilledNameRef = useRef("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [companyId, setCompanyId] = useState("");
   const [role, setRole] = useState<UserRole>("user");
+  const [companyAutoDetected, setCompanyAutoDetected] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+
+  useEffect(() => {
+    const storedAdminLogin = window.localStorage.getItem(ADMIN_LOGIN_STORAGE_KEY);
+
+    if (!storedAdminLogin) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedAdminLogin) as {
+        name?: string;
+        email?: string;
+      };
+
+      if (parsed.name) {
+        setName(parsed.name);
+      }
+
+      if (parsed.email) {
+        setEmail(parsed.email);
+      }
+
+      if (parsed.name || parsed.email) {
+        setRole("admin");
+      }
+    } catch {
+      window.localStorage.removeItem(ADMIN_LOGIN_STORAGE_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     listCompanies().then((data) => {
@@ -25,26 +61,103 @@ export function LoginScreen() {
     });
   }, []);
 
-  async function handleEmailBlur() {
-    if (!email.trim() || !isSupabaseConfigured()) return;
-    setIsLookingUp(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase
-        .from("users")
-        .select("name, company_id")
-        .eq("email", email.trim())
-        .maybeSingle();
-      if (data?.name && !name.trim()) {
-        setName(data.name);
-      }
-      if (data?.company_id) {
-        setCompanyId(data.company_id);
-      }
-    } finally {
-      setIsLookingUp(false);
+  useEffect(() => {
+    if (role !== "admin") {
+      return;
     }
-  }
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName && !trimmedEmail) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      ADMIN_LOGIN_STORAGE_KEY,
+      JSON.stringify({
+        name: trimmedName,
+        email: trimmedEmail,
+      }),
+    );
+  }, [email, name, role]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      setIsLookingUp(false);
+      setCompanyAutoDetected(false);
+      setWebhookUrl("");
+      autoFilledNameRef.current = "";
+      return;
+    }
+
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      setIsLookingUp(true);
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("users")
+          .select("*")
+          .ilike("email", normalizedEmail)
+          .maybeSingle();
+
+        if (!active) {
+          return;
+        }
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.name) {
+          setName((current) =>
+            !current.trim() || current === autoFilledNameRef.current ? data.name : current,
+          );
+          autoFilledNameRef.current = data.name;
+        } else {
+          setName((current) =>
+            current === autoFilledNameRef.current ? "" : current,
+          );
+          autoFilledNameRef.current = "";
+        }
+
+        if (data?.company_id) {
+          setCompanyId(data.company_id);
+          setCompanyAutoDetected(true);
+        } else {
+          setCompanyAutoDetected(false);
+        }
+
+        setWebhookUrl(data?.webhook_url ?? "");
+
+        if (data?.role === "admin" || data?.role === "user") {
+          setRole(data.role as UserRole);
+        }
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setCompanyAutoDetected(false);
+        setWebhookUrl("");
+      } finally {
+        if (active) {
+          setIsLookingUp(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [email]);
 
   const selectedCompany = useMemo(
     () => companies.find((company) => company.id === companyId),
@@ -54,27 +167,31 @@ export function LoginScreen() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!name.trim() || !email.trim() || !selectedCompany) {
-      return;
-    }
+    if (!isReady) return;
+    if (!name.trim() || !email.trim()) return;
+    if (role !== "admin" && !selectedCompany) return;
 
     const nextUser: AuthUser = {
       userId: crypto.randomUUID(),
       name: name.trim(),
       email: email.trim(),
       role,
-      company: {
-        companyId: selectedCompany.id,
-        companyName: selectedCompany.name,
-        workspaceId: selectedCompany.workspaceId,
-        datasetId: selectedCompany.datasetId,
-      },
+      webhookUrl: webhookUrl || undefined,
+      company: selectedCompany
+        ? {
+            companyId: selectedCompany.id,
+            companyName: selectedCompany.name,
+            workspaceId: selectedCompany.workspaceId,
+            datasetId: selectedCompany.datasetId,
+            webhookUrl: selectedCompany.webhookUrl,
+          }
+        : { companyId: "", companyName: "" },
     };
 
     login(nextUser);
 
-    if (role === "admin") {
-      router.replace("/admin/companies");
+    if (role === "admin" && canAccessAdminSurface) {
+      router.replace("/admin/dashboard");
       return;
     }
 
@@ -159,26 +276,46 @@ export function LoginScreen() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  onBlur={handleEmailBlur}
                   placeholder="paulo@empresa.com"
                   className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
                 />
               </label>
 
-              <label className="grid gap-3 text-sm text-foreground">
-                <span>Empresa</span>
-                <select
-                  value={companyId}
-                  onChange={(event) => setCompanyId(event.target.value)}
-                  className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
-                >
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {role !== "admin" && (
+                isLookingUp ? (
+                  <div className="grid gap-3 text-sm text-foreground">
+                    <span>Empresa</span>
+                    <div className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 text-muted">
+                      Identificando empresa...
+                    </div>
+                  </div>
+                ) : companyAutoDetected && selectedCompany ? (
+                  <div className="grid gap-3 text-sm text-foreground">
+                    <span>Empresa</span>
+                    <div className="flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-accent">
+                        <path d="M20 6 9 17l-5-5"/>
+                      </svg>
+                      <span className="font-medium text-foreground">{selectedCompany.name}</span>
+                    </div>
+                  </div>
+                ) : email.trim() ? (
+                  <div className="grid gap-3 text-sm text-foreground">
+                    <span>Empresa</span>
+                    <select
+                      value={companyId}
+                      onChange={(event) => setCompanyId(event.target.value)}
+                      className="rounded-2xl border border-border/80 bg-card/80 px-4 py-3.5 outline-none transition focus:border-accent/60"
+                    >
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null
+              )}
 
               <label className="grid gap-3 text-sm text-foreground">
                 <span>Perfil</span>
@@ -191,6 +328,19 @@ export function LoginScreen() {
                   <option value="admin">Admin</option>
                 </select>
               </label>
+
+              {role === "admin" && isReady && !canAccessAdminSurface ? (
+                <div className="rounded-3xl border border-border/80 bg-card/60 p-4 text-sm text-muted">
+                  <p className="font-medium text-foreground">
+                    Admin somente no computador
+                  </p>
+                  <p className="mt-2 leading-7">
+                    {isStandalone
+                      ? "No app instalado, o acesso continua pelo chat. O painel admin fica disponivel apenas no navegador do computador."
+                      : "Em celular ou tablet, o login continua pelo chat. O painel admin fica disponivel apenas no navegador do computador."}
+                  </p>
+                </div>
+              ) : null}
 
               {selectedCompany ? (
                 <div className="rounded-3xl border border-border/80 bg-card/60 p-4 text-sm text-muted">

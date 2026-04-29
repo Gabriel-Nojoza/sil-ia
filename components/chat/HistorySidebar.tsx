@@ -25,14 +25,21 @@ export function HistorySidebar({ userId, currentSessionId, onSelectSession, onNe
     if (!userId) return;
     setLoading(true);
     const supabase = getSupabaseBrowserClient();
-    supabase
-      .from("conversation_logs")
-      .select("session_id, messages, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        if (!data) return;
+
+    async function loadSessions() {
+      try {
+        const { data } = await supabase
+          .from("conversation_logs")
+          .select("session_id, messages, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (!data) {
+          setSessions([]);
+          return;
+        }
+
         const seen = new Set<string>();
         const grouped: Session[] = [];
         for (const row of data) {
@@ -42,9 +49,16 @@ export function HistorySidebar({ userId, currentSessionId, onSelectSession, onNe
           const first = msgs.find((m) => m.role === "user")?.content ?? "Nova conversa";
           grouped.push({ session_id: row.session_id, first_message: first, created_at: row.created_at });
         }
+
         setSessions(grouped);
-      })
-      .finally(() => setLoading(false));
+      } catch {
+        setSessions([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadSessions();
   }, [userId]);
 
   async function handleSelect(sessionId: string) {

@@ -1,3 +1,5 @@
+import type { SilResponse } from "@/components/sil/types";
+
 export type MessageRole = "user" | "assistant";
 
 export type MessageStatus = "idle" | "sending" | "sent" | "error";
@@ -8,6 +10,12 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   status?: MessageStatus;
+  silResponse?: SilResponse;
+}
+
+export interface ChatHistoryEntry {
+  role: MessageRole;
+  content: string;
 }
 
 export interface ChatRequestPayload {
@@ -21,6 +29,8 @@ export interface ChatRequestPayload {
   company_name: string;
   workspace_id?: string;
   dataset_id?: string;
+  webhook_url?: string;
+  history?: ChatHistoryEntry[];
 }
 
 export interface ChatResponse {
@@ -33,6 +43,7 @@ export interface CompanyContext {
   companyName: string;
   workspaceId?: string;
   datasetId?: string;
+  webhookUrl?: string;
 }
 
 export type UserRole = "user" | "admin";
@@ -42,6 +53,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: UserRole;
+  webhookUrl?: string;
   company: CompanyContext;
 }
 

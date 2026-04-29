@@ -9,8 +9,14 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "SIL Inteligência Analítica",
-  description: "Interface de chat com IA para análise de dados no Power BI.",
+  title: "SIL Chat",
+  description: "Chat de IA da SIL para consulta e analise de dados no Power BI.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SIL Chat",
+  },
 };
 
 export default function RootLayout({
