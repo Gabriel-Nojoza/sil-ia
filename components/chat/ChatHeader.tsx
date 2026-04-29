@@ -12,11 +12,13 @@ interface ChatHeaderProps {
   companyId: string;
   sessionId: string;
   onHistoryClick: () => void;
+  onMobileHistoryOpen?: () => void;
 }
 
 export function ChatHeader({
   userName,
   companyName,
+  onMobileHistoryOpen,
 }: ChatHeaderProps) {
   const { user, logout } = useAuthContext();
   const { canAccessAdminSurface } = useAdminSurface();
@@ -25,6 +27,20 @@ export function ChatHeader({
     <header className="border-b border-border/80 px-3 py-2 sm:px-6">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
+          {onMobileHistoryOpen ? (
+            <button
+              type="button"
+              onClick={onMobileHistoryOpen}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-white/5 text-muted transition hover:text-foreground lg:hidden"
+              aria-label="Histórico"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          ) : null}
           <Image
             src="/sil-logo.png"
             alt="Logo SIL"

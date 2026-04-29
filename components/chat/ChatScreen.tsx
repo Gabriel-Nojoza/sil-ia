@@ -43,6 +43,7 @@ export function ChatScreen() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     setSessionId(createUuid());
@@ -123,13 +124,15 @@ export function ChatScreen() {
 
   return (
     <ChatLayout
+      mobileSidebarOpen={mobileSidebarOpen}
+      onMobileSidebarClose={() => setMobileSidebarOpen(false)}
       sidebar={
         <HistorySidebar
           key={sidebarRefresh}
           userId={user?.userId ?? ""}
           currentSessionId={sessionId}
-          onSelectSession={(sid, msgs) => { setSessionId(sid); setMessages(msgs); }}
-          onNewChat={handleNewChat}
+          onSelectSession={(sid, msgs) => { setSessionId(sid); setMessages(msgs); setMobileSidebarOpen(false); }}
+          onNewChat={() => { handleNewChat(); setMobileSidebarOpen(false); }}
         />
       }
       header={
@@ -140,6 +143,7 @@ export function ChatScreen() {
           companyName={company?.companyName ?? ""}
           sessionId={sessionId}
           onHistoryClick={handleNewChat}
+          onMobileHistoryOpen={() => setMobileSidebarOpen(true)}
         />
       }
       footer={

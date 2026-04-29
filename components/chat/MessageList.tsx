@@ -12,7 +12,7 @@ export function MessageList({ messages, isSending, error }: MessageListProps) {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="chat-scrollbar flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+    <div className="chat-scrollbar flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6">
       {isEmpty ? (
         <div className="flex h-full min-h-[420px] items-center justify-center">
           <div className="max-w-xl rounded-[32px] border border-border/80 bg-white/[0.03] p-8 text-center">

@@ -24,10 +24,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       aria-live="polite"
     >
       <div
-        className={`rounded-3xl border px-4 py-3 shadow-lg sm:px-5 ${
+        className={`min-w-0 rounded-3xl border px-4 py-3 shadow-lg sm:px-5 ${
           isUser
             ? "max-w-[88%] border-accent/40 bg-accent/15 text-foreground sm:max-w-[75%]"
-            : "w-full max-w-3xl border-border/80 bg-card/90 text-foreground"
+            : "w-full max-w-3xl overflow-hidden border-border/80 bg-card/90 text-foreground"
         }`}
       >
         <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted">
