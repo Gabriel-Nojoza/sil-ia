@@ -179,11 +179,15 @@ async function runN8n(payload: unknown, webhookUrl?: string): Promise<NextRespon
     throw new Error("Webhook do n8n nao configurado para este usuario ou empresa.");
   }
 
+  // Remove `history` from the payload — n8n manages its own session memory via sessionId.
+  // Sending both causes the AI Agent to receive duplicate context and fail on turn 2+.
+  const { history: _history, ...n8nPayload } = payload as Record<string, unknown>;
+
   const url = webhookUrl;
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(n8nPayload),
     cache: "no-store",
   });
 
