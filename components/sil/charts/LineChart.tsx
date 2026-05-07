@@ -19,6 +19,8 @@ interface Props {
 }
 
 export function LineChart({ data, config }: Props) {
+  if (!data?.labels?.length || !data?.datasets?.length) return null;
+
   const chartData = data.labels.map((label, i) => {
     const row: Record<string, string | number> = { name: label };
     data.datasets.forEach((ds) => { row[ds.label] = ds.values[i] ?? 0; });

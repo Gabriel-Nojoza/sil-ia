@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import {
   BarChart,
@@ -22,6 +21,8 @@ interface Props {
 }
 
 export function HorizontalBarChart({ data, config }: Props) {
+  if (!data?.labels?.length || !data?.datasets?.length) return null;
+
   const chartData = data.labels.map((label, i) => ({
     name: label,
     value: data.datasets[0]?.values[i] ?? 0,
