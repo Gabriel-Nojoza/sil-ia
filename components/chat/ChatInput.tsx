@@ -34,7 +34,7 @@ export function ChatInput({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Pergunte sobre seus dados..."
-          className="min-h-[52px] flex-1 resize-none rounded-2xl border border-transparent bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted sm:min-h-[64px]"
+          className="min-h-[52px] flex-1 resize-none rounded-2xl border border-transparent bg-transparent px-4 py-3 text-base text-foreground outline-none placeholder:text-muted sm:min-h-[64px] sm:text-sm"
           disabled={disabled}
         />
 

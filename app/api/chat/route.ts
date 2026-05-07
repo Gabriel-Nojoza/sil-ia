@@ -174,6 +174,46 @@ async function runSilEngine(payload: Record<string, unknown>): Promise<NextRespo
   });
 }
 
+type RawDataset = { data?: unknown; values?: unknown; [key: string]: unknown };
+
+function normalizeChartBlock(block: Record<string, unknown>): Record<string, unknown> {
+  if (block.type !== "chart") return block;
+
+  // Already nested under `data` — just fix `data` → `values` inside datasets if needed
+  if (block.data && typeof block.data === "object" && !Array.isArray(block.data)) {
+    const d = block.data as Record<string, unknown>;
+    if (Array.isArray(d.datasets)) {
+      d.datasets = d.datasets.map((ds: RawDataset) =>
+        Array.isArray(ds.data) && !ds.values ? { ...ds, values: ds.data, data: undefined } : ds,
+      );
+    }
+    return block;
+  }
+
+  // Flat format from n8n: labels + datasets at block root level
+  if (Array.isArray(block.labels) && Array.isArray(block.datasets)) {
+    const datasets = (block.datasets as RawDataset[]).map((ds) =>
+      Array.isArray(ds.data) && !ds.values ? { ...ds, values: ds.data, data: undefined } : ds,
+    );
+    const { labels, datasets: _ds, ...rest } = block;
+    return { ...rest, data: { labels, datasets } };
+  }
+
+  return block;
+}
+
+function normalizeN8nBlocks(body: unknown): unknown {
+  if (!body || typeof body !== "object") return body;
+  const obj = body as Record<string, unknown>;
+  if (!Array.isArray(obj.blocks)) return body;
+  return {
+    ...obj,
+    blocks: obj.blocks.map((b) =>
+      b && typeof b === "object" ? normalizeChartBlock(b as Record<string, unknown>) : b,
+    ),
+  };
+}
+
 async function runN8n(payload: unknown, webhookUrl?: string): Promise<NextResponse> {
   if (!webhookUrl) {
     throw new Error("Webhook do n8n nao configurado para este usuario ou empresa.");
@@ -201,11 +241,26 @@ async function runN8n(payload: unknown, webhookUrl?: string): Promise<NextRespon
   }
 
   if (body && typeof body === "object" && "blocks" in body) {
+    const normalized = normalizeN8nBlocks(body);
     if (!response.ok) {
-      return NextResponse.json(body, { status: response.status });
+      return NextResponse.json(normalized, { status: response.status });
     }
 
-    return NextResponse.json(body);
+    return NextResponse.json(normalized);
+  }
+
+  // n8n returned a single block object directly (e.g. { type: "chart", ... })
+  if (body && typeof body === "object" && "type" in body) {
+    const wrapped = { blocks: [body] };
+    const normalized = normalizeN8nBlocks(wrapped);
+    return NextResponse.json(normalized, response.ok ? undefined : { status: response.status });
+  }
+
+  // n8n returned an array of blocks directly
+  if (Array.isArray(body) && body.length > 0 && body[0] && typeof body[0] === "object" && "type" in body[0]) {
+    const wrapped = { blocks: body };
+    const normalized = normalizeN8nBlocks(wrapped);
+    return NextResponse.json(normalized, response.ok ? undefined : { status: response.status });
   }
 
   const candidate = body as Record<string, unknown> | null;
@@ -225,11 +280,19 @@ async function runN8n(payload: unknown, webhookUrl?: string): Promise<NextRespon
   }
 
   if (structured && typeof structured === "object" && "blocks" in structured) {
+    const normalized = normalizeN8nBlocks(structured);
     if (!response.ok) {
-      return NextResponse.json(structured, { status: response.status });
+      return NextResponse.json(normalized, { status: response.status });
     }
 
-    return NextResponse.json(structured);
+    return NextResponse.json(normalized);
+  }
+
+  // structured is a single block (e.g. { type: "chart", ... }) embedded in message/output field
+  if (structured && typeof structured === "object" && "type" in structured) {
+    const wrapped = { blocks: [structured] };
+    const normalized = normalizeN8nBlocks(wrapped);
+    return NextResponse.json(normalized, response.ok ? undefined : { status: response.status });
   }
 
   const silResponse = { blocks: [{ type: "text", content: rawText }] };

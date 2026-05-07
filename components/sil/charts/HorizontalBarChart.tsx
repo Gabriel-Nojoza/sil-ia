@@ -1,11 +1,14 @@
 "use client";
+"use client";
 
 import {
   BarChart,
   Bar,
+  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   ReferenceLine,
   Cell,
@@ -38,12 +41,35 @@ export function HorizontalBarChart({ data, config }: Props) {
   return (
     <ResponsiveContainer width="100%" height={config?.height ?? 300}>
       <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
-        <XAxis type="number" tickFormatter={formatValue} tick={{ fontSize: 11 }} />
-        <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} />
+        <CartesianGrid stroke="rgba(255,255,255,0.08)" horizontal vertical={false} />
+        <XAxis
+          type="number"
+          tickFormatter={formatValue}
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "rgba(148,163,184,0.9)", fontSize: 11 }}
+        />
+        <YAxis
+          dataKey="name"
+          type="category"
+          width={140}
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "rgba(148,163,184,0.9)", fontSize: 11 }}
+        />
         <Tooltip
           formatter={tooltipFormatter}
           contentStyle={{ backgroundColor: "rgba(17,24,39,0.95)", border: "none", borderRadius: 8, color: "#fff" }}
+          cursor={{ fill: "rgba(255,255,255,0.03)" }}
         />
+        {(config?.showLegend ?? true) && (
+          <Legend
+            verticalAlign="bottom"
+            align="center"
+            iconType="square"
+            wrapperStyle={{ paddingTop: 12, fontSize: "12px", color: "#94a3b8" }}
+          />
+        )}
         {config?.referenceLine && (
           <ReferenceLine
             x={config.referenceLine.value}

@@ -61,6 +61,14 @@ export function HistorySidebar({ userId, currentSessionId, onSelectSession, onNe
     void loadSessions();
   }, [userId]);
 
+  async function handleDelete(sessionId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const supabase = getSupabaseBrowserClient();
+    await supabase.from("conversation_logs").delete().eq("session_id", sessionId).eq("user_id", userId);
+    setSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
+    if (sessionId === currentSessionId) onNewChat();
+  }
+
   async function handleSelect(sessionId: string) {
     if (sessionId === currentSessionId) return;
     const supabase = getSupabaseBrowserClient();
@@ -104,17 +112,31 @@ export function HistorySidebar({ userId, currentSessionId, onSelectSession, onNe
           <p className="px-4 py-3 text-xs text-muted">Nenhuma conversa ainda.</p>
         ) : (
           sessions.map((s) => (
-            <button
+            <div
               key={s.session_id}
-              type="button"
-              onClick={() => handleSelect(s.session_id)}
-              className={`w-full px-4 py-3 text-left transition hover:bg-white/5 ${
+              className={`group relative flex items-center transition hover:bg-white/5 ${
                 s.session_id === currentSessionId ? "bg-accent/10 border-l-2 border-accent" : ""
               }`}
             >
-              <p className="truncate text-sm text-foreground">{s.first_message}</p>
-              <p className="mt-0.5 text-xs text-muted">{formatDate(s.created_at)}</p>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleSelect(s.session_id)}
+                className="min-w-0 flex-1 px-4 py-3 text-left"
+              >
+                <p className="truncate text-sm text-foreground">{s.first_message}</p>
+                <p className="mt-0.5 text-xs text-muted">{formatDate(s.created_at)}</p>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleDelete(s.session_id, e)}
+                className="mr-2 hidden shrink-0 rounded p-1 text-muted transition hover:text-red-400 group-hover:flex"
+                title="Apagar conversa"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
           ))
         )}
       </div>
