@@ -124,7 +124,7 @@ export function HistorySidebar({ userId, currentSessionId, refreshTick, onSelect
               <button
                 type="button"
                 onClick={(e) => handleDelete(s.session_id, e)}
-                className="mr-2 hidden shrink-0 rounded p-1 text-muted transition hover:text-red-400 group-hover:flex"
+                className="mr-2 flex shrink-0 rounded p-1 text-muted/40 transition hover:text-red-400 sm:hidden sm:group-hover:flex"
                 title="Apagar conversa"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
