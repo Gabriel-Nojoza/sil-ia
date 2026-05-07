@@ -128,9 +128,9 @@ export function ChatScreen() {
       onMobileSidebarClose={() => setMobileSidebarOpen(false)}
       sidebar={
         <HistorySidebar
-          key={sidebarRefresh}
           userId={user?.userId ?? ""}
           currentSessionId={sessionId}
+          refreshTick={sidebarRefresh}
           onSelectSession={(sid, msgs) => { setSessionId(sid); setMessages(msgs); setMobileSidebarOpen(false); }}
           onNewChat={() => { handleNewChat(); setMobileSidebarOpen(false); }}
         />

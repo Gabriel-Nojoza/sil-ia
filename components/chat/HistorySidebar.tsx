@@ -13,53 +13,48 @@ interface Session {
 interface HistorySidebarProps {
   userId: string;
   currentSessionId: string;
+  refreshTick?: number;
   onSelectSession: (sessionId: string, messages: ChatMessage[]) => void;
   onNewChat: () => void;
 }
 
-export function HistorySidebar({ userId, currentSessionId, onSelectSession, onNewChat }: HistorySidebarProps) {
+export function HistorySidebar({ userId, currentSessionId, refreshTick, onSelectSession, onNewChat }: HistorySidebarProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  async function loadSessions(showSpinner = true) {
     if (!userId) return;
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     const supabase = getSupabaseBrowserClient();
+    try {
+      const { data } = await supabase
+        .from("conversation_logs")
+        .select("session_id, messages, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    async function loadSessions() {
-      try {
-        const { data } = await supabase
-          .from("conversation_logs")
-          .select("session_id, messages, created_at")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(50);
+      if (!data) { setSessions([]); return; }
 
-        if (!data) {
-          setSessions([]);
-          return;
-        }
-
-        const seen = new Set<string>();
-        const grouped: Session[] = [];
-        for (const row of data) {
-          if (seen.has(row.session_id)) continue;
-          seen.add(row.session_id);
-          const msgs: ChatMessage[] = Array.isArray(row.messages) ? row.messages : [];
-          const first = msgs.find((m) => m.role === "user")?.content ?? "Nova conversa";
-          grouped.push({ session_id: row.session_id, first_message: first, created_at: row.created_at });
-        }
-
-        setSessions(grouped);
-      } catch {
-        setSessions([]);
-      } finally {
-        setLoading(false);
+      const seen = new Set<string>();
+      const grouped: Session[] = [];
+      for (const row of data) {
+        if (seen.has(row.session_id)) continue;
+        seen.add(row.session_id);
+        const msgs: ChatMessage[] = Array.isArray(row.messages) ? row.messages : [];
+        const first = msgs.find((m) => m.role === "user")?.content ?? "Nova conversa";
+        grouped.push({ session_id: row.session_id, first_message: first, created_at: row.created_at });
       }
+      setSessions(grouped);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    void loadSessions();
-  }, [userId]);
+  useEffect(() => { void loadSessions(true); }, [userId]);
+  useEffect(() => { if (refreshTick) void loadSessions(false); }, [refreshTick]);
 
   async function handleDelete(sessionId: string, e: React.MouseEvent) {
     e.stopPropagation();
